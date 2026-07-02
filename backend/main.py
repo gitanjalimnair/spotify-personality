@@ -17,7 +17,7 @@ app = FastAPI()
 # Enable CORS so your Next.js frontend can communicate with this backend cleanly
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "https://spotify-personality-chi.vercel.app"],
+    allow_origins=["https://spotify-personality-chi.vercel.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

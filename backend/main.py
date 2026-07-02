@@ -17,7 +17,7 @@ app = FastAPI()
 # Enable CORS so your Next.js frontend can communicate with this backend cleanly
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "https://spotify-personality-gamma.vercel.app/"],
+    allow_origins=["http://localhost:3000", "https://spotify-personality-chi.vercel.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -40,7 +40,7 @@ def login():
 def callback(code: str = None, error: str = None):
     """Catches the code from Spotify, exchanges it for a token, and forwards it to frontend."""
     if error:
-        return RedirectResponse(url=f"https://spotify-personality-chi.vercel.app//?token={access_token}")
+        return RedirectResponse(url=f"https://spotify-personality-chi.vercel.app/?token={access_token}")
     
     if not code:
         raise HTTPException(status_code=400, detail="Authorization code missing")

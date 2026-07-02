@@ -40,7 +40,7 @@ def login():
 def callback(code: str = None, error: str = None):
     """Catches the code from Spotify, exchanges it for a token, and forwards it to frontend."""
     if error:
-        return RedirectResponse(url=f"https://spotify-personality-gamma.vercel.app/?token={access_token}")
+        return RedirectResponse(url=f"https://spotify-personality-chi.vercel.app//?token={access_token}")
     
     if not code:
         raise HTTPException(status_code=400, detail="Authorization code missing")

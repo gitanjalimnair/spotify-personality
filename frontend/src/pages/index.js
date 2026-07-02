@@ -17,14 +17,14 @@ export default function Home() {
   }, []);
 
   const handleLogin = () => {
-    window.location.href = 'http://127.0.0.1:8000/login';
+    window.location.href = 'https://spotify-personality.onrender.com/login';
   };
 
   const fetchMusicProfile = async (accessToken) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get(`http://127.0.0.1:8000/api/profile?token=${accessToken}`);
+      const response = await axios.get(`https://spotify-personality.onrender.com/api/profile?token=${accessToken}`);
       setProfileData(response.data);
     } catch (err) {
       setError('Failed to fetch your music soul archetype.');

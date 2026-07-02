@@ -40,7 +40,7 @@ def login():
 def callback(code: str = None, error: str = None):
     """Catches the code from Spotify, exchanges it for a token, and forwards it to frontend."""
     if error:
-        return RedirectResponse(url=f"https://spotify-personality-chi.vercel.app/?token={access_token}")
+        return RedirectResponse(url=f"https://spotify-personality-chi.vercel.app/?error={error}")
     
     if not code:
         raise HTTPException(status_code=400, detail="Authorization code missing")
@@ -64,8 +64,8 @@ def callback(code: str = None, error: str = None):
     token_data = response.json()
     access_token = token_data.get("access_token")
 
-    # BOUNCE THE USER RIGHT BACK TO YOUR NEXT.JS FRONTEND PORT 3000 WITH THE TOKEN
-    return RedirectResponse(url=f"http://localhost:3000/?token={access_token}")
+    # FIX: Bounces the browser back to your live Vercel app instead of localhost!
+    return RedirectResponse(url=f"https://spotify-personality-chi.vercel.app/?token={access_token}")
 
 @app.get("/api/profile")
 def get_profile(token: str):

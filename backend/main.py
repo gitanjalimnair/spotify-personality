@@ -176,4 +176,7 @@ def get_profile(token: str):
         }
         
     except Exception as e:
+        # 🧠 ADD THIS LINE RIGHT HERE:
+        print(f"!!! CRITICAL SERVER CRASH ERROR: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+    

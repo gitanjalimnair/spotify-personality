@@ -16,8 +16,15 @@ CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
 CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 REDIRECT_URI = "https://spotify-personality.onrender.com/callback"
 
-# Initialize the Gemini Client using the official SDK
-genai_client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+# 🧠 SANITY CHECK: Print to logs to ensure the key is actually loading
+gemini_key = os.getenv("GEMINI_API_KEY")
+print(f"--- SERVER INIT: GEMINI_API_KEY found? {bool(gemini_key)} ---")
+
+if not gemini_key:
+    print("!!! ERROR: GEMINI_API_KEY environment variable is missing completely !!!")
+
+# Initialize the Gemini Client explicitly
+genai_client = genai.Client(api_key=gemini_key)
 
 app = FastAPI()
 

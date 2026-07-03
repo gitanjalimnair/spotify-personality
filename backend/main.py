@@ -17,7 +17,7 @@ CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 REDIRECT_URI = "https://spotify-personality.onrender.com/callback"
 
 # Initialize the Gemini Client using the official SDK
-genai_client = genai.Client()
+genai_client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 app = FastAPI()
 

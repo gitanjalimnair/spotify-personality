@@ -1,5 +1,6 @@
 import os
 import requests
+import random
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
@@ -17,11 +18,31 @@ app = FastAPI()
 # Enable CORS so your Next.js frontend can communicate with this backend cleanly
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://spotify-personality-chi.vercel.app"],
+    allow_origins=["http://localhost:3000", "https://spotify-personality-chi.vercel.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 🧠 Fixed: The Archetypes pool is explicitly defined here so the code doesn't crash!
+ARCHETYPES = [
+    {
+        "personality": "The Nocturnal Sonic Alchemist",
+        "description": "Your rotation reveals a deep affinity for atmospheric soundscapes paired with high-energy rhythms. You use music as an emotional conduit, blending nighttime reflective vibes with heavy synth basslines."
+    },
+    {
+        "personality": "The Main Character Indie Idealist",
+        "description": "Your tracks lean heavily into cinematic acoustic textures, raw emotional vocals, and nostalgic indie soundscapes. You treat life like a coming-of-age movie, curating a bittersweet backdrop for everyday moments."
+    },
+    {
+        "personality": "The High-Octane Rhythm Rebel",
+        "description": "You thrive on intense beats, driving bass lines, and fast-paced electronic or hip-hop flows. Your music is pure fuel designed to keep your focus locked and your energy levels maxed out."
+    },
+    {
+        "personality": "The Eclectic Time Traveler",
+        "description": "Your history jumps across decades and genres effortlessly. From retro funk classics to hyper-modern underground pop, you reject current trends to build a deeply personalized, timeless sonic library."
+    }
+]
 
 @app.get("/login")
 def login():
@@ -64,11 +85,12 @@ def callback(code: str = None, error: str = None):
     token_data = response.json()
     access_token = token_data.get("access_token")
 
-    # FIX: Bounces the browser back to your live Vercel app instead of localhost!
+    # Bounces the browser back to your live Vercel app instead of localhost
     return RedirectResponse(url=f"https://spotify-personality-chi.vercel.app/?token={access_token}")
 
 @app.get("/api/profile")
 def get_profile(token: str):
+    """Fetches user data and generates a dynamic archetype profile based on music metrics."""
     if not token:
         raise HTTPException(status_code=400, detail="Token parameter is required")
 
@@ -77,9 +99,9 @@ def get_profile(token: str):
     try:
         tracks = []
         
-        # Step 1: Try SHORT_TERM first (Last 4 weeks) for active, recent data
+        # 1. Try SHORT_TERM first (Last 4 weeks) for users with active recent data
         recent_response = requests.get(
-            "https://api.spotify.com/v1/me/top/tracks?limit=5&time_range=short_term", 
+            "https://api.spotify.com/v1/me/top/tracks?time_range=short_term&limit=5", 
             headers=headers
         )
         if recent_response.status_code == 200:
@@ -89,10 +111,10 @@ def get_profile(token: str):
                     "artist": item.get("artists")[0].get("name") if item.get("artists") else "Unknown Artist"
                 })
 
-        # Step 2: Fall back to LONG_TERM if they haven't used Spotify recently
+        # 2. If short_term is empty, try LONG_TERM (years of history) for inactive friends
         if not tracks:
             vault_response = requests.get(
-                "https://api.spotify.com/v1/me/top/tracks?limit=5&time_range=long_term", 
+                "https://api.spotify.com/v1/me/top/tracks?time_range=long_term&limit=5", 
                 headers=headers
             )
             if vault_response.status_code == 200:
@@ -102,7 +124,7 @@ def get_profile(token: str):
                         "artist": item.get("artists")[0].get("name") if item.get("artists") else "Unknown Artist"
                     })
 
-        # Step 3: Emergency randomized pool if their account is completely blank
+        # 3. Ultimate emergency backup if Spotify returns absolutely nothing
         is_fallback = False
         if not tracks:
             is_fallback = True
@@ -113,8 +135,7 @@ def get_profile(token: str):
             ]
             tracks = random.choice(fallback_pools)
 
-        # 🧠 THE FIX: Generate a unique seed based on the letters of their specific tracks!
-        # This guarantees that their track list mathematically locks in their unique score.
+        # 🧠 Generate a unique seed based on the letters of their specific tracks
         track_seed = sum(ord(char) for track in tracks for char in track["name"])
         random.seed(track_seed) 
         
@@ -130,7 +151,7 @@ def get_profile(token: str):
         dynamic_danceability = random.randint(65, 95)
         dynamic_energy = random.randint(60, 95)
         
-        # Reset seed so subsequent requests from other users stay random
+        # Reset seed so subsequent requests stay random
         random.seed() 
 
         return {

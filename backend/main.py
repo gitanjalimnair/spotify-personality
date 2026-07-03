@@ -69,42 +69,76 @@ def callback(code: str = None, error: str = None):
 
 @app.get("/api/profile")
 def get_profile(token: str):
-    """Fetches user data and generates a mock archetype profile based on music metrics."""
     if not token:
         raise HTTPException(status_code=400, detail="Token parameter is required")
 
     headers = {"Authorization": f"Bearer {token}"}
     
-    # Try fetching real data from Spotify
     try:
-        top_tracks_response = requests.get(
-            "https://api.spotify.com/v1/me/top/tracks?limit=5&time_range=medium_term", 
+        tracks = []
+        
+        # Step 1: Try SHORT_TERM first (Last 4 weeks) for active, recent data
+        recent_response = requests.get(
+            "https://api.spotify.com/v1/me/top/tracks?limit=5&time_range=short_term", 
             headers=headers
         )
-        
-        tracks = []
-        if top_tracks_response.status_code == 200:
-            for item in top_tracks_response.json().get("items", []):
+        if recent_response.status_code == 200:
+            for item in recent_response.json().get("items", []):
                 tracks.append({
                     "name": item.get("name"),
                     "artist": item.get("artists")[0].get("name") if item.get("artists") else "Unknown Artist"
                 })
-        
-        # Fallback items if their new Spotify profile has no listening history yet
-        if not tracks:
-            tracks = [
-                {"name": "Blinding Lights", "artist": "The Weeknd"},
-                {"name": "Stay", "artist": "The Kid LAROI & Justin Bieber"},
-                {"name": "Good 4 U", "artist": "Olivia Rodrigo"}
-            ]
 
-        # Generate a creative archetype structure to return to the dashboard interface
+        # Step 2: Fall back to LONG_TERM if they haven't used Spotify recently
+        if not tracks:
+            vault_response = requests.get(
+                "https://api.spotify.com/v1/me/top/tracks?limit=5&time_range=long_term", 
+                headers=headers
+            )
+            if vault_response.status_code == 200:
+                for item in vault_response.json().get("items", []):
+                    tracks.append({
+                        "name": item.get("name"),
+                        "artist": item.get("artists")[0].get("name") if item.get("artists") else "Unknown Artist"
+                    })
+
+        # Step 3: Emergency randomized pool if their account is completely blank
+        is_fallback = False
+        if not tracks:
+            is_fallback = True
+            fallback_pools = [
+                [{"name": "Starboy", "artist": "The Weeknd"}, {"name": "Nightchanges", "artist": "One Direction"}, {"name": "Perfect", "artist": "Ed Sheeran"}],
+                [{"name": "Bohemian Rhapsody", "artist": "Queen"}, {"name": "Sweater Weather", "artist": "The Neighbourhood"}, {"name": "Do I Wanna Know?", "artist": "Arctic Monkeys"}],
+                [{"name": "Kya Baat Ay", "artist": "Harrdy Sandhu"}, {"name": "Bukhaar", "artist": "Aroob Khan"}, {"name": "Piche Tere", "artist": "Kunwarr"}]
+            ]
+            tracks = random.choice(fallback_pools)
+
+        # 🧠 THE FIX: Generate a unique seed based on the letters of their specific tracks!
+        # This guarantees that their track list mathematically locks in their unique score.
+        track_seed = sum(ord(char) for track in tracks for char in track["name"])
+        random.seed(track_seed) 
+        
+        chosen_archetype = random.choice(ARCHETYPES)
+        personality_title = chosen_archetype["personality"]
+        description_text = chosen_archetype["description"]
+        
+        if is_fallback:
+            personality_title = f"The Vaulted {personality_title}"
+            description_text = "Your profile is currently locked in time capsule mode! " + description_text
+
+        # Generate unique metrics anchored to their personal track seed
+        dynamic_danceability = random.randint(65, 95)
+        dynamic_energy = random.randint(60, 95)
+        
+        # Reset seed so subsequent requests from other users stay random
+        random.seed() 
+
         return {
-            "personality": "The Nocturnal Sonic Alchemist",
-            "description": "Your rotation reveals a deep affinity for atmospheric soundscapes paired with high-energy rhythms. You use music as an emotional conduit, blending nighttime reflective vibes with heavy synth basslines.",
+            "personality": personality_title,
+            "description": description_text,
             "stats": {
-                "danceability": 74,
-                "energy": 82
+                "danceability": dynamic_danceability,
+                "energy": dynamic_energy
             },
             "top_tracks": tracks
         }

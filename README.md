@@ -37,7 +37,8 @@ Output:
 
 ### Live Application Render
 <img width="1600" height="838" alt="image" src="https://github.com/user-attachments/assets/0df2393f-df11-43ad-ab20-73a0cf430de6" />
-<img width="1600" height="844" alt="image" src="https://github.com/user-attachments/assets/10e83c47-db54-43f1-974e-4113526c8884" />
+<img width="1918" height="1006" alt="image" src="https://github.com/user-attachments/assets/a8ab0d2d-b03e-4902-a78a-72b0784b018b" />
+
 
 ---
 

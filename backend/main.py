@@ -16,17 +16,8 @@ CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
 CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 REDIRECT_URI = "https://spotify-personality.onrender.com/callback"
 
-# 🧠 Fixed for AQ. Key Structure: Fetch cleanly without string format assumptions
-gemini_key = os.getenv("GEMINI_API_KEY")
-
-if gemini_key:
-    # Safely clean out any accidental hidden quotes or whitespace characters
-    gemini_key = gemini_key.strip().replace('"', '').replace("'", "")
-
-print(f"--- SERVER INIT: GEMINI_API_KEY detected? {bool(gemini_key)} ---")
-
-# Initialize the Gemini Client explicitly forcing the auth key configuration
-genai_client = genai.Client(api_key=gemini_key)
+# Clean, official client initialization
+genai_client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 app = FastAPI()
 

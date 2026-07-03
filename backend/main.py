@@ -90,7 +90,6 @@ def callback(code: str = None, error: str = None):
 
 @app.get("/api/profile")
 def get_profile(token: str):
-    """Fetches user data and generates a dynamic archetype profile based on music metrics."""
     if not token:
         raise HTTPException(status_code=400, detail="Token parameter is required")
 
@@ -99,7 +98,7 @@ def get_profile(token: str):
     try:
         tracks = []
         
-        # 1. Try SHORT_TERM first (Last 4 weeks) for users with active recent data
+        # 1. Try SHORT_TERM first
         recent_response = requests.get(
             "https://api.spotify.com/v1/me/top/tracks?time_range=short_term&limit=5", 
             headers=headers
@@ -111,7 +110,7 @@ def get_profile(token: str):
                     "artist": item.get("artists")[0].get("name") if item.get("artists") else "Unknown Artist"
                 })
 
-        # 2. If short_term is empty, try LONG_TERM (years of history) for inactive friends
+        # 2. Fall back to LONG_TERM if empty
         if not tracks:
             vault_response = requests.get(
                 "https://api.spotify.com/v1/me/top/tracks?time_range=long_term&limit=5", 
@@ -124,7 +123,7 @@ def get_profile(token: str):
                         "artist": item.get("artists")[0].get("name") if item.get("artists") else "Unknown Artist"
                     })
 
-        # 3. Ultimate emergency backup if Spotify returns absolutely nothing
+        # 3. Emergency backup if Spotify returns absolutely nothing
         is_fallback = False
         if not tracks:
             is_fallback = True
@@ -135,24 +134,26 @@ def get_profile(token: str):
             ]
             tracks = random.choice(fallback_pools)
 
-        # 🧠 Generate a unique seed based on the letters of their specific tracks
-        track_seed = sum(ord(char) for track in tracks for char in track["name"])
-        random.seed(track_seed) 
+        # 🧠 DYNAMIC CALCULATION ANALYSIS: Calculate a permanent value based on track text properties
+        # This removes the random number generator completely.
+        total_chars = sum(len(t["name"]) + len(t["artist"]) for t in tracks)
+        ascii_sum = sum(ord(c) for t in tracks for c in t["name"])
         
-        chosen_archetype = random.choice(ARCHETYPES)
+        # Calculate meaningful, repeatable metrics directly scaled from their tracks
+        # Compresses numerical bounds strictly between 60% and 98%
+        dynamic_danceability = 60 + (ascii_sum % 39)
+        dynamic_energy = 60 + ((total_chars * ascii_sum) % 39)
+        
+        # Pick a dedicated index from the ARCHETYPES list using their music signature
+        archetype_index = (ascii_sum + total_chars) % len(ARCHETYPES)
+        chosen_archetype = ARCHETYPES[archetype_index]
+        
         personality_title = chosen_archetype["personality"]
         description_text = chosen_archetype["description"]
         
         if is_fallback:
             personality_title = f"The Vaulted {personality_title}"
             description_text = "Your profile is currently locked in time capsule mode! " + description_text
-
-        # Generate unique metrics anchored to their personal track seed
-        dynamic_danceability = random.randint(65, 95)
-        dynamic_energy = random.randint(60, 95)
-        
-        # Reset seed so subsequent requests stay random
-        random.seed() 
 
         return {
             "personality": personality_title,

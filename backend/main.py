@@ -17,7 +17,7 @@ CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 REDIRECT_URI = "https://spotify-personality.onrender.com/callback"
 
 # Initialize the Gemini Client using the official SDK
-genai_client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+genai_client = genai.Client()
 
 app = FastAPI()
 
@@ -140,6 +140,7 @@ def get_profile(token: str):
         """
 
         # Call the Gemini model using structured JSON output configurations
+        # Make the structured AI call
         ai_response = genai_client.models.generate_content(
             model='gemini-2.5-flash',
             contents=prompt,
@@ -148,8 +149,16 @@ def get_profile(token: str):
             ),
         )
 
-        # Parse the structured JSON response string into a standard Python dictionary
-        profile_data = json.loads(ai_response.text)
+        # Clean any potential markdown wrappers from the text before parsing
+        clean_text = ai_response.text.strip()
+        if clean_text.startswith("```json"):
+            clean_text = clean_text[7:]
+        if clean_text.endswith("```"):
+            clean_text = clean_text[:-3]
+        clean_text = clean_text.strip()
+
+        # Convert the text block into standard Python formats safely
+        profile_data = json.loads(clean_text)
 
         personality_title = profile_data.get("personality", "The Sonic Explorer")
         description_text = profile_data.get("description", "Your musical taste spans diverse emotional spaces.")

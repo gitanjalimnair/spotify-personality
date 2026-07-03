@@ -1,10 +1,13 @@
 import os
+import json
 import requests
 import random
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from dotenv import load_dotenv
+from google import genai
+from google.genai import types
 
 # Load environment variables from .env file
 load_dotenv()
@@ -12,6 +15,9 @@ load_dotenv()
 CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
 CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 REDIRECT_URI = "https://spotify-personality.onrender.com/callback"
+
+# Initialize the Gemini Client using the official SDK
+genai_client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 app = FastAPI()
 
@@ -23,26 +29,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# 🧠 Fixed: The Archetypes pool is explicitly defined here so the code doesn't crash!
-ARCHETYPES = [
-    {
-        "personality": "The Nocturnal Sonic Alchemist",
-        "description": "Your rotation reveals a deep affinity for atmospheric soundscapes paired with high-energy rhythms. You use music as an emotional conduit, blending nighttime reflective vibes with heavy synth basslines."
-    },
-    {
-        "personality": "The Main Character Indie Idealist",
-        "description": "Your tracks lean heavily into cinematic acoustic textures, raw emotional vocals, and nostalgic indie soundscapes. You treat life like a coming-of-age movie, curating a bittersweet backdrop for everyday moments."
-    },
-    {
-        "personality": "The High-Octane Rhythm Rebel",
-        "description": "You thrive on intense beats, driving bass lines, and fast-paced electronic or hip-hop flows. Your music is pure fuel designed to keep your focus locked and your energy levels maxed out."
-    },
-    {
-        "personality": "The Eclectic Time Traveler",
-        "description": "Your history jumps across decades and genres effortlessly. From retro funk classics to hyper-modern underground pop, you reject current trends to build a deeply personalized, timeless sonic library."
-    }
-]
 
 @app.get("/login")
 def login():
@@ -85,7 +71,7 @@ def callback(code: str = None, error: str = None):
     token_data = response.json()
     access_token = token_data.get("access_token")
 
-    # Bounces the browser back to your live Vercel app instead of localhost
+    # Bounces the browser back to your live Vercel app
     return RedirectResponse(url=f"https://spotify-personality-chi.vercel.app/?token={access_token}")
 
 @app.get("/api/profile")
@@ -134,23 +120,41 @@ def get_profile(token: str):
             ]
             tracks = random.choice(fallback_pools)
 
-        # 🧠 DYNAMIC CALCULATION ANALYSIS: Calculate a permanent value based on track text properties
-        # This removes the random number generator completely.
-        total_chars = sum(len(t["name"]) + len(t["artist"]) for t in tracks)
-        ascii_sum = sum(ord(c) for t in tracks for c in t["name"])
+        # 🧠 DYNAMIC AI ANALYSIS ENGINE
+        # Format track names and artists safely into a summary string for Gemini
+        tracks_summary = ", ".join([f"'{t['name']}' by {t['artist']}" for t in tracks])
         
-        # Calculate meaningful, repeatable metrics directly scaled from their tracks
-        # Compresses numerical bounds strictly between 60% and 98%
-        dynamic_danceability = 60 + (ascii_sum % 39)
-        dynamic_energy = 60 + ((total_chars * ascii_sum) % 39)
+        prompt = f"""
+        Analyze this user's top Spotify tracks: {tracks_summary}.
+        Based on the genre, cultural context, language, tempo, and vibe of these specific songs, generate a deeply personalized musical profile.
         
-        # Pick a dedicated index from the ARCHETYPES list using their music signature
-        archetype_index = (ascii_sum + total_chars) % len(ARCHETYPES)
-        chosen_archetype = ARCHETYPES[archetype_index]
-        
-        personality_title = chosen_archetype["personality"]
-        description_text = chosen_archetype["description"]
-        
+        Return your response strictly as a JSON object matching this schema:
+        {{
+            "personality": "A creative, highly specific 3-5 word title for their musical archetype (e.g., 'The Late-Night Desi Dreamer' or 'The High-Octane Bass Rebel')",
+            "description": "A meaningful, beautifully written 2-3 sentence paragraph describing their unique personality and listening traits based on these exact songs.",
+            "stats": {{
+                "danceability": <a logically calculated integer between 40 and 99 representing the rhythm/movement factor of this mix>,
+                "energy": <a logically calculated integer between 40 and 99 representing the sound intensity/pace factor>
+            }}
+        }}
+        """
+
+        # Call the Gemini model using structured JSON output configurations
+        ai_response = genai_client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+            ),
+        )
+
+        # Parse the structured JSON response string into a standard Python dictionary
+        profile_data = json.loads(ai_response.text)
+
+        personality_title = profile_data.get("personality", "The Sonic Explorer")
+        description_text = profile_data.get("description", "Your musical taste spans diverse emotional spaces.")
+        stats = profile_data.get("stats", {"danceability": 75, "energy": 75})
+
         if is_fallback:
             personality_title = f"The Vaulted {personality_title}"
             description_text = "Your profile is currently locked in time capsule mode! " + description_text
@@ -158,11 +162,9 @@ def get_profile(token: str):
         return {
             "personality": personality_title,
             "description": description_text,
-            "stats": {
-                "danceability": dynamic_danceability,
-                "energy": dynamic_energy
-            },
+            "stats": stats,
             "top_tracks": tracks
         }
+        
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

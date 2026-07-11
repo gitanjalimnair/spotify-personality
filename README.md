@@ -1,4 +1,4 @@
-# 🎵 VibeCheck
+# 🎵 Spotify Personality Archetype
 
 Live Demo: [spotify-personality-chi.vercel.app](https://spotify-personality-chi.vercel.app/)
 
